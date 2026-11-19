@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>DANNY PIZZA — Fast Food &amp; BBQ</title>
+    <meta
+      name="description"
+      content="Order hot stone-baked pizzas, signature deals, charcoal BBQ, and fast food online from Danny Pizza, North Karachi."
+    />
+    <meta property="og:title" content="DANNY PIZZA — Fast Food &amp; BBQ" />
+    <meta
+      property="og:description"
+      content="Order hot stone-baked pizzas, signature deals, charcoal BBQ, and fast food online from Danny Pizza, North Karachi."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/webp" href="/src/assets/images/danny_pizza_logo.webp" />
+    <link rel="apple-touch-icon" href="/src/assets/images/danny_pizza_logo.webp" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('danny_pizza_theme');
+          var root = document.documentElement;
+          if (saved === 'light') {
+            root.classList.remove('dark');
+          } else {
+            root.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="antialiased selection:bg-red-600 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

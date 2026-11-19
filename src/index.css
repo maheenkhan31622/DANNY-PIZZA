@@ -1,0 +1,102 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Barlow Condensed', 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+    /* Light Mode: 20% Creamy Blush Red Palette */
+    --bg-canvas: #FBEBEB;
+    --bg-surface: #FFF8F8;
+    --bg-elevated: #FFFFFF;
+    --text-primary: #1F0B0D;
+    --text-secondary: #5C3337;
+    --border-subtle: rgba(185, 28, 28, 0.14);
+  }
+
+  html.dark {
+    /* Dark Mode: 60% Deep Obsidian Black + Crimson Gradient */
+    --bg-canvas: #0A0405;
+    --bg-surface: #140709;
+    --bg-elevated: #1D0A0E;
+    --text-primary: #FAF5F5;
+    --text-secondary: #D4B4B7;
+    --border-subtle: rgba(239, 68, 68, 0.18);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    overflow-x: clip;
+    transition: background-color 280ms ease, color 280ms ease;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+/* Light / Dark Brand Gradient Surfaces */
+.brand-canvas-bg {
+  background: linear-gradient(165deg, #FCEEEE 0%, #F7DFDF 45%, #FBEAEA 100%);
+}
+
+html.dark .brand-canvas-bg {
+  background: radial-gradient(circle at 18% 0%, rgba(153, 27, 27, 0.28) 0%, transparent 48%),
+    radial-gradient(circle at 85% 20%, rgba(127, 29, 29, 0.22) 0%, transparent 45%),
+    linear-gradient(180deg, #090304 0%, #120507 55%, #0B0405 100%);
+}
+
+/* Hide scrollbars cleanly for horizontal category rail */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes cart-wiggle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  20% { transform: scale(1.22) rotate(-10deg); }
+  45% { transform: scale(1.18) rotate(10deg); }
+  70% { transform: scale(1.1) rotate(-6deg); }
+  85% { transform: scale(1.05) rotate(4deg); }
+}
+
+.animate-cart-wiggle {
+  animation: cart-wiggle 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Ultra-narrow mobile devices: stack Navbar top section vertically so brand title, status & actions never overlap or clip */
+@media (max-width: 335px) {
+  .navbar-top-shell {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .navbar-brand-zone {
+    width: 100%;
+  }
+  .navbar-actions-zone {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated customer profile and saved preferences for Danny Pizza.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the customer."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Customer display name from Google or profile."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 120,
+          "description": "Verified customer email address."
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Customer avatar URL."
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Customer mobile number for delivery updates."
+        },
+        "savedArea": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Selected Karachi delivery area."
+        },
+        "savedAddress": {
+          "type": "string",
+          "maxLength": 250,
+          "description": "Street address in Karachi."
+        },
+        "favoriteItemIds": {
+          "type": "array",
+          "description": "Bounded list of favorite menu item IDs (max 50)."
+        },
+        "preferredTheme": {
+          "type": "string",
+          "enum": ["dark", "light"],
+          "description": "Preferred UI color theme."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account profile creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last profile update timestamp."
+        }
+      },
+      "required": ["uid", "displayName", "email", "createdAt", "updatedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer food order with real-time kitchen and delivery tracking.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Order document ID."
+        },
+        "orderNumber": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 24,
+          "description": "Human-readable order code e.g. DP-1042."
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner Firebase Auth UID."
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Recipient name."
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 20,
+          "description": "Recipient contact number."
+        },
+        "customerEmail": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Recipient email."
+        },
+        "orderType": {
+          "type": "string",
+          "enum": ["delivery", "takeaway", "dine-in"],
+          "description": "Fulfillment method."
+        },
+        "area": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Karachi neighborhood area."
+        },
+        "deliveryAddress": {
+          "type": "string",
+          "maxLength": 250,
+          "description": "Full delivery street address or table note."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Special kitchen or rider instructions."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["cash_on_delivery", "online_payment"],
+          "description": "Selected payment option."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["placed", "cooking", "out_for_delivery", "delivered"],
+          "description": "Current order tracking stage."
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded order line items (1 to 30 items)."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Items subtotal in PKR."
+        },
+        "deliveryFee": {
+          "type": "number",
+          "description": "Calculated delivery fee in PKR."
+        },
+        "total": {
+          "type": "number",
+          "description": "Grand total in PKR."
+        },
+        "distanceKm": {
+          "type": "number",
+          "description": "Distance from Sector 5-A/2 North Karachi in km."
+        },
+        "estimatedMinutes": {
+          "type": "number",
+          "description": "Estimated preparation and delivery minutes."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of order placement."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest status update."
+        }
+      },
+      "required": [
+        "id",
+        "orderNumber",
+        "userId",
+        "customerName",
+        "customerPhone",
+        "orderType",
+        "paymentMethod",
+        "status",
+        "items",
+        "subtotal",
+        "deliveryFee",
+        "total",
+        "distanceKm",
+        "estimatedMinutes",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private customer profile, saved Karachi delivery area, favorites, and theme preference."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer orders and real-time order tracking status scoped strictly to owner userId."
+    }
+  }
+}

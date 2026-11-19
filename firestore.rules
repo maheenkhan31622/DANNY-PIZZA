@@ -1,0 +1,224 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'uid',
+          'displayName',
+          'email',
+          'photoURL',
+          'phone',
+          'savedArea',
+          'savedAddress',
+          'favoriteItemIds',
+          'preferredTheme',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.uid is string
+        && data.uid == userId
+        && isValidId(data.uid)
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 80
+        && data.email is string
+        && data.email.size() >= 3
+        && data.email.size() <= 120
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 20))
+        && (!('savedArea' in data) || (data.savedArea is string && data.savedArea.size() <= 100))
+        && (!('savedAddress' in data) || (data.savedAddress is string && data.savedAddress.size() <= 250))
+        && (!('favoriteItemIds' in data) || (
+          data.favoriteItemIds is list
+          && data.favoriteItemIds.size() <= 50
+          && (data.favoriteItemIds.size() == 0 || (data.favoriteItemIds[0] is string && data.favoriteItemIds[0].size() <= 64))
+        ))
+        && (!('preferredTheme' in data) || (data.preferredTheme is string && data.preferredTheme in ['dark', 'light']))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOrder(data, orderId) {
+      return data.keys().hasAll([
+          'id',
+          'orderNumber',
+          'userId',
+          'customerName',
+          'customerPhone',
+          'orderType',
+          'paymentMethod',
+          'status',
+          'items',
+          'subtotal',
+          'deliveryFee',
+          'total',
+          'distanceKm',
+          'estimatedMinutes',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id',
+          'orderNumber',
+          'userId',
+          'customerName',
+          'customerPhone',
+          'customerEmail',
+          'orderType',
+          'area',
+          'deliveryAddress',
+          'notes',
+          'paymentMethod',
+          'status',
+          'items',
+          'subtotal',
+          'deliveryFee',
+          'total',
+          'distanceKm',
+          'estimatedMinutes',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.id is string
+        && data.id == orderId
+        && isValidId(data.id)
+        && data.orderNumber is string
+        && data.orderNumber.size() >= 3
+        && data.orderNumber.size() <= 24
+        && data.userId is string
+        && isValidId(data.userId)
+        && data.customerName is string
+        && data.customerName.size() >= 1
+        && data.customerName.size() <= 80
+        && data.customerPhone is string
+        && data.customerPhone.size() >= 7
+        && data.customerPhone.size() <= 20
+        && (!('customerEmail' in data) || (data.customerEmail is string && data.customerEmail.size() <= 120))
+        && data.orderType is string
+        && data.orderType in ['delivery', 'takeaway', 'dine-in']
+        && (!('area' in data) || (data.area is string && data.area.size() <= 100))
+        && (!('deliveryAddress' in data) || (data.deliveryAddress is string && data.deliveryAddress.size() <= 250))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 300))
+        && data.paymentMethod is string
+        && data.paymentMethod in ['cash_on_delivery', 'online_payment']
+        && data.status is string
+        && data.status in ['placed', 'cooking', 'out_for_delivery', 'delivered']
+        && data.items is list
+        && data.items.size() >= 1
+        && data.items.size() <= 30
+        && data.items[0] is map
+        && data.subtotal is number
+        && data.subtotal >= 0
+        && data.subtotal <= 500000
+        && data.deliveryFee is number
+        && data.deliveryFee >= 0
+        && data.deliveryFee <= 50000
+        && data.total is number
+        && data.total >= 0
+        && data.total <= 550000
+        && data.distanceKm is number
+        && data.distanceKm >= 0
+        && data.distanceKm <= 200
+        && data.estimatedMinutes is number
+        && data.estimatedMinutes >= 5
+        && data.estimatedMinutes <= 240
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOrderStatusTransition(prev, next) {
+      return (prev == 'placed' && next == 'cooking')
+        || (prev == 'cooking' && next == 'out_for_delivery')
+        || (prev == 'out_for_delivery' && next == 'delivered');
+    }
+
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName',
+          'email',
+          'photoURL',
+          'phone',
+          'savedArea',
+          'savedAddress',
+          'favoriteItemIds',
+          'preferredTheme',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified()
+        && isValidId(orderId)
+        && isValidOrder(incoming(), orderId)
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'placed'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified()
+        && isValidId(orderId)
+        && isValidOrder(incoming(), orderId)
+        && existing().userId == request.auth.uid
+        && incoming().userId == existing().userId
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && existing().status != 'delivered'
+        && isValidOrderStatusTransition(existing().status, incoming().status)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if false;
+    }
+  }
+}

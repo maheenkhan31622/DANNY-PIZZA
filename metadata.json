@@ -1,0 +1,6 @@
+{
+  "name": "DANNY PIZZA — Fast Food & BBQ",
+  "description": "Order hot stone-baked pizzas, signature deals, charcoal BBQ, and fast food online from Danny Pizza, North Karachi.",
+  "requestFramePermissions": ["geolocation", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
