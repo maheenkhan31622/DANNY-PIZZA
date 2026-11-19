@@ -3,20 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#B91C1C" />
+
     <title>DANNY PIZZA — Fast Food &amp; BBQ</title>
     <meta
       name="description"
       content="Order hot stone-baked pizzas, signature deals, charcoal BBQ, and fast food online from Danny Pizza, North Karachi."
     />
+
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- OpenGraph Social Link Preview (WhatsApp, Facebook, Discord, LinkedIn, iMessage) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DANNY PIZZA" />
     <meta property="og:title" content="DANNY PIZZA — Fast Food &amp; BBQ" />
     <meta
       property="og:description"
       content="Order hot stone-baked pizzas, signature deals, charcoal BBQ, and fast food online from Danny Pizza, North Karachi."
     />
-    <meta property="og:type" content="website" />
+    <meta property="og:url" content="/" />
+    <meta property="og:image" content="/og-preview.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="DANNY PIZZA — Stone-Baked Pizzas, Deals & Live Charcoal BBQ" />
+
+    <!-- Twitter / X Social Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="icon" type="image/webp" href="/src/assets/images/danny_pizza_logo.webp" />
-    <link rel="apple-touch-icon" href="/src/assets/images/danny_pizza_logo.webp" />
+    <meta name="twitter:title" content="DANNY PIZZA — Fast Food &amp; BBQ" />
+    <meta
+      name="twitter:description"
+      content="Order hot stone-baked pizzas, signature deals, charcoal BBQ, and fast food online from Danny Pizza, North Karachi."
+    />
+    <meta name="twitter:image" content="/og-preview.jpg" />
+    <meta name="twitter:image:alt" content="DANNY PIZZA — Fast Food & BBQ" />
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": "DANNY PIZZA",
+        "description": "Order hot stone-baked pizzas, signature deals, charcoal BBQ, and fast food online from Danny Pizza, North Karachi.",
+        "servesCuisine": ["Pizza", "BBQ", "Fast Food", "Pakistani"],
+        "telephone": "+92-344-0111191",
+        "openingHours": "Mo-Su 16:30-02:00",
+        "priceRange": "Rs. 120 - Rs. 2,999",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Shop No. L-363, Sector 5-A/2, Near Zahid Biryani, North Karachi",
+          "addressLocality": "Karachi",
+          "addressCountry": "PK"
+        },
+        "image": "/og-preview.jpg",
+        "logo": "/favicon-192.png"
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
