@@ -223,11 +223,18 @@ export function CartDrawer({
           savedAddress: cleanAddress || profile?.savedAddress || '',
         });
       } else {
-        await fetch('/api/orders', {
+        const response = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderPayload),
         });
+        if (response.status === 503) {
+          setFormError('Sign in to place an online order, or order on WhatsApp.');
+          return;
+        }
+        if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+          throw new Error('Guest order rejected');
+        }
       }
 
       onClearCart();
