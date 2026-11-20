@@ -90,7 +90,19 @@ function DannyPizzaApp() {
     }
   });
 
-  const [detectedCoords, setDetectedCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [detectedCoords, setDetectedCoords] = useState<{ lat: number; lng: number } | undefined>(() => {
+    try {
+      const raw = localStorage.getItem('danny_detected_coords');
+      if (!raw) return undefined;
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.lat === 'number' && typeof parsed?.lng === 'number') {
+        return { lat: parsed.lat, lng: parsed.lng };
+      }
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  });
   const [detectedAddress, setDetectedAddress] = useState<string | undefined>(() => {
     try {
       return localStorage.getItem('danny_detected_address') || undefined;
@@ -127,6 +139,11 @@ function DannyPizzaApp() {
       localStorage.setItem('danny_location_selected', '1');
       localStorage.setItem('danny_area_id', area.id);
       localStorage.setItem('danny_order_type', type);
+      if (coords) {
+        localStorage.setItem('danny_detected_coords', JSON.stringify(coords));
+      } else {
+        localStorage.removeItem('danny_detected_coords');
+      }
       if (addrLabel) {
         localStorage.setItem('danny_detected_address', addrLabel);
       } else {
@@ -308,6 +325,7 @@ function DannyPizzaApp() {
         open={locationModalOpen}
         initialAreaId={selectedArea.id}
         initialOrderType={orderType}
+        initialDetectedCoords={detectedCoords}
         initialDetectedAddress={detectedAddress}
         canClose={hasSavedLocation}
         onClose={() => setLocationModalOpen(false)}
@@ -328,6 +346,7 @@ function DannyPizzaApp() {
           setDetectedAddress(undefined);
           try {
             localStorage.setItem('danny_area_id', area.id);
+            localStorage.removeItem('danny_detected_coords');
             localStorage.removeItem('danny_detected_address');
           } catch {}
         }}

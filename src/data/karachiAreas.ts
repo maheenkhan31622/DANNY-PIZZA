@@ -178,7 +178,7 @@ const AREA_KEYWORDS: { id: string; patterns: RegExp[] }[] = [
   { id: 'up-more', patterns: [/up\s?more/i, /u\.p\.\s?more/i] },
   { id: 'power-house', patterns: [/power\s?house/i] },
   { id: 'nagan-chowrangi', patterns: [/nagan/i] },
-  { id: 'new-karachi', patterns: [/new karachi/i] },
+  { id: 'new-karachi', patterns: [/\bnew karachi\b(?!\s+town)/i] },
   { id: 'surjani-town', patterns: [/surjani/i] },
   { id: 'shadman-1', patterns: [/shadman.*14[-\s]?a/i, /sector\s?14[-\s]?a/i] },
   { id: 'shadman-2', patterns: [/shadman.*14[-\s]?b/i, /sector\s?14[-\s]?b/i, /shadman/i] },
@@ -188,20 +188,21 @@ const AREA_KEYWORDS: { id: string; patterns: RegExp[] }[] = [
   { id: 'five-star', patterns: [/five\s?star/i, /5\s?star/i] },
   { id: 'kda-chowrangi', patterns: [/hyderi/i, /kda\s?chowrangi/i] },
   { id: 'sohrab-goth', patterns: [/sohrab\s?goth/i, /al[-\s]?asif/i] },
-  { id: 'water-pump', patterns: [/water\s?pump/i, /block\s?16/i] },
-  { id: 'ayesha-manzil', patterns: [/ayesha\s?manzil/i] },
+  { id: 'water-pump', patterns: [/water\s?pump/i, /\bblock\s?16\b/i] },
+  { id: 'fb-area-13', patterns: [/\bblock\s?(13|17)\b/i] },
+  { id: 'ayesha-manzil', patterns: [/ayesha\s?manzil/i, /\bblock\s?7\b.*fb/i] },
   { id: 'karimabad', patterns: [/karimabad/i] },
   { id: 'azizabad', patterns: [/azizabad/i, /mukka\s?chowk/i] },
-  { id: 'ancholi', patterns: [/ancholi/i, /block\s?20/i] },
-  { id: 'gulberg', patterns: [/gulberg/i] },
+  { id: 'ancholi', patterns: [/ancholi/i, /\bblock\s?20\b/i] },
+  { id: 'gulberg', patterns: [/\bgulberg\b(?!\s+(town|district))/i] },
   { id: 'nazimabad-5', patterns: [/paposh/i] },
-  { id: 'nazimabad-1', patterns: [/nazimabad/i] },
+  { id: 'nazimabad-1', patterns: [/\bnazimabad\b(?!\s+(town|district))/i] },
   { id: 'liaquatabad', patterns: [/liaquatabad/i, /lalu\s?khet/i] },
   { id: 'orangi-town', patterns: [/orangi/i] },
   { id: 'site-area', patterns: [/s\.?i\.?t\.?e/i, /metroville/i] },
   { id: 'baldia-town', patterns: [/baldia/i] },
   { id: 'gulshan-13d', patterns: [/13[-\s]?d/i] },
-  { id: 'gulshan-2', patterns: [/gulshan.*iqbal/i] },
+  { id: 'gulshan-2', patterns: [/gulshan[-\s]?e[-\s]?iqbal/i] },
   { id: 'gulistan-johar-1', patterns: [/gulistan.*johar/i, /jauhar/i] },
   { id: 'safoora-goth', patterns: [/safoora/i] },
   { id: 'scheme-33', patterns: [/scheme\s?33/i, /gulzar[-\s]?e[-\s]?hijri/i] },
@@ -211,7 +212,7 @@ const AREA_KEYWORDS: { id: string; patterns: RegExp[] }[] = [
   { id: 'tariq-road', patterns: [/tariq\s?road/i] },
   { id: 'garden', patterns: [/garden\s?(east|west)/i] },
   { id: 'soldier-bazaar', patterns: [/soldier\s?bazaar/i] },
-  { id: 'saddar', patterns: [/saddar/i] },
+  { id: 'saddar', patterns: [/\bsaddar\b(?!\s+(town|district))/i] },
   { id: 'lyari', patterns: [/lyari/i] },
   { id: 'shahrah-faisal', patterns: [/shahrah[-\s]?e?[-\s]?faisal/i] },
   { id: 'clifton', patterns: [/clifton/i] },
@@ -220,7 +221,7 @@ const AREA_KEYWORDS: { id: string; patterns: RegExp[] }[] = [
   { id: 'shah-faisal-colony', patterns: [/shah\s?faisal/i] },
   { id: 'model-colony', patterns: [/model\s?colony/i] },
   { id: 'malir-cantt', patterns: [/malir\s?cantt/i] },
-  { id: 'malir-city', patterns: [/malir/i, /saudabad/i] },
+  { id: 'malir-city', patterns: [/\bmalir\b(?!\s+(town|district))/i, /saudabad/i] },
   { id: 'korangi', patterns: [/korangi/i] },
   { id: 'landhi', patterns: [/landhi/i] },
   { id: 'steel-town', patterns: [/steel\s?town/i, /hadeed/i] },
@@ -251,7 +252,8 @@ export function snapCoordsToKarachiServiceArea(
         const candidate = KARACHI_AREAS.find((a) => a.id === entry.id);
         if (candidate) {
           const dist = haversineDistanceKm(lat, lng, candidate.lat, candidate.lng);
-          if (dist <= 15 && dist < bestKeywordDist) {
+          // Only prefer a keyword match if it is genuinely close and does not pull away from a closer exact coordinate
+          if (dist <= Math.max(nearest.distanceKm + 0.8, 1.8) && dist < bestKeywordDist) {
             bestKeywordDist = dist;
             bestKeywordArea = candidate;
           }

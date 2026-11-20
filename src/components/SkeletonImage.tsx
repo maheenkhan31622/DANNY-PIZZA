@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Flame } from 'lucide-react';
 
 interface SkeletonImageProps {
@@ -14,8 +14,19 @@ export function SkeletonImage({
   className = '',
   priority = false,
 }: SkeletonImageProps) {
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      setLoaded(true);
+    } else {
+      setLoaded(false);
+    }
+  }, [src]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-red-100/80 dark:bg-[#230B0F]">
@@ -33,6 +44,7 @@ export function SkeletonImage({
         </div>
       ) : (
         <img
+          ref={imgRef}
           src={src}
           alt={alt}
           loading={priority ? 'eager' : 'lazy'}

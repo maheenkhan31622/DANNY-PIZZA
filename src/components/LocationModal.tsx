@@ -23,6 +23,7 @@ interface LocationModalProps {
   open: boolean;
   initialAreaId: string;
   initialOrderType: OrderType;
+  initialDetectedCoords?: { lat: number; lng: number };
   initialDetectedAddress?: string;
   canClose: boolean;
   onClose: () => void;
@@ -44,49 +45,98 @@ function getBrowserPosition(options: PositionOptions): Promise<GeolocationPositi
   });
 }
 
+async function fetchJsonWithTimeout(url: string, timeoutMs = 4500): Promise<any | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function detectClientIpLocation(): Promise<{
+  lat: number;
+  lng: number;
+  city: string;
+  region: string;
+  country: string;
+} | null> {
+  // 1. Direct browser request to CORS-enabled ipwho.is (sees user's actual ISP IP, not server datacenter IP)
+  const ipwho = await fetchJsonWithTimeout('https://ipwho.is/', 4500);
+  if (ipwho?.success && typeof ipwho.latitude === 'number' && typeof ipwho.longitude === 'number') {
+    return {
+      lat: ipwho.latitude,
+      lng: ipwho.longitude,
+      city: ipwho.city || '',
+      region: ipwho.region || '',
+      country: ipwho.country || '',
+    };
+  }
+
+  // 2. Direct browser fallback to GeoJS
+  const geojs = await fetchJsonWithTimeout('https://get.geojs.io/v1/ip/geo.json', 4500);
+  if (geojs) {
+    const lat = Number(geojs.latitude);
+    const lng = Number(geojs.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return {
+        lat,
+        lng,
+        city: geojs.city || '',
+        region: geojs.region || '',
+        country: geojs.country || '',
+      };
+    }
+  }
+
+  // 3. Server proxy fallback (only succeeds when proxy forwarded real public client IP header)
+  const serverIp = await fetchJsonWithTimeout('/api/ip-location', 4500);
+  if (serverIp?.ok && typeof serverIp.lat === 'number' && typeof serverIp.lng === 'number') {
+    return {
+      lat: serverIp.lat,
+      lng: serverIp.lng,
+      city: serverIp.city || '',
+      region: serverIp.region || '',
+      country: serverIp.country || '',
+    };
+  }
+
+  return null;
+}
+
 async function reverseGeocodeWithFallback(
   lat: number,
   lng: number
 ): Promise<{ label: string; fullAddress: string }> {
   // 1. Primary server-side reverse geocode (Nominatim + BigDataCloud)
-  try {
-    const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
-    if (res.ok) {
-      const geo = await res.json();
-      if (geo?.ok && (geo.label || geo.fullAddress)) {
-        return {
-          label: geo.label || '',
-          fullAddress: geo.fullAddress || geo.label || '',
-        };
-      }
-    }
-  } catch {
-    // Fall through to direct client fallback
+  const geo = await fetchJsonWithTimeout(`/api/reverse-geocode?lat=${lat}&lng=${lng}`, 5000);
+  if (geo?.ok && (geo.label || geo.fullAddress)) {
+    return {
+      label: geo.label || '',
+      fullAddress: geo.fullAddress || geo.label || '',
+    };
   }
 
   // 2. Direct client-side BigDataCloud reverse-geocode fallback
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4500);
-    const resp = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
-      { signal: controller.signal }
-    );
-    clearTimeout(timer);
-    if (resp.ok) {
-      const data: any = await resp.json();
-      const locality = data?.locality || '';
-      const city = data?.city || data?.principalSubdivision || '';
-      const label = [locality, city].filter((v, i, arr) => v && arr.indexOf(v) === i).join(', ');
-      if (label) {
-        return {
-          label,
-          fullAddress: [label, data?.countryName].filter(Boolean).join(', '),
-        };
-      }
+  const data = await fetchJsonWithTimeout(
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+    4500
+  );
+  if (data) {
+    const locality = data?.locality || '';
+    const city = (data?.city || data?.principalSubdivision || '').replace(/\s+Division$/i, '').trim();
+    const label = [locality, city].filter((v, i, arr) => v && arr.indexOf(v) === i).join(', ');
+    if (label) {
+      return {
+        label,
+        fullAddress: [label, data?.countryName].filter(Boolean).join(', '),
+      };
     }
-  } catch {
-    // Fall through to coordinate-only nearest service area snapping
   }
 
   return { label: '', fullAddress: '' };
@@ -96,6 +146,7 @@ export function LocationModal({
   open,
   initialAreaId,
   initialOrderType,
+  initialDetectedCoords,
   initialDetectedAddress,
   canClose,
   onClose,
@@ -106,7 +157,9 @@ export function LocationModal({
   const [areaQuery, setAreaQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [detecting, setDetecting] = useState(false);
-  const [detectedCoords, setDetectedCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [detectedCoords, setDetectedCoords] = useState<{ lat: number; lng: number } | undefined>(
+    initialDetectedCoords
+  );
   const [detectedAddress, setDetectedAddress] = useState<string | undefined>(initialDetectedAddress);
   const [geoStatus, setGeoStatus] = useState<{
     type: 'success' | 'warning' | 'error';
@@ -117,11 +170,12 @@ export function LocationModal({
     if (open) {
       setOrderType(initialOrderType);
       setSelectedAreaId(initialAreaId);
+      setDetectedCoords(initialDetectedCoords);
       setDetectedAddress(initialDetectedAddress);
       setGeoStatus(null);
       setAreaQuery('');
     }
-  }, [open, initialAreaId, initialOrderType, initialDetectedAddress]);
+  }, [open, initialAreaId, initialOrderType, initialDetectedCoords, initialDetectedAddress]);
 
   const selectedArea = useMemo(
     () => KARACHI_AREAS.find((a) => a.id === selectedAreaId) || KARACHI_AREAS[0],
@@ -143,45 +197,48 @@ export function LocationModal({
     source: 'gps-high' | 'gps-network' | 'ip',
     fallbackCityLabel?: string
   ) => {
-    const { label: revLabel, fullAddress: revFull } = await reverseGeocodeWithFallback(lat, lng);
+    const isCoarseIp = source === 'ip' || accuracyM > 3500;
+    const { label: revLabel, fullAddress: revFull } = isCoarseIp
+      ? { label: fallbackCityLabel || '', fullAddress: fallbackCityLabel || '' }
+      : await reverseGeocodeWithFallback(lat, lng);
 
     const snapped = snapCoordsToKarachiServiceArea(
       lat,
       lng,
-      revFull || revLabel || fallbackCityLabel
+      isCoarseIp ? undefined : revLabel || revFull || fallbackCityLabel
     );
 
-    // Always snap selectedAreaId to the closest valid service area in KARACHI_AREAS
-    setSelectedAreaId(snapped.area.id);
-    setDropdownOpen(false);
-
     if (snapped.withinServiceRange) {
-      // Keep precise detected coordinates for accurate delivery-fee calculation
-      setDetectedCoords({ lat, lng });
-      const displayLabel = revLabel || snapped.area.name;
-      setDetectedAddress(displayLabel);
+      setSelectedAreaId(snapped.area.id);
 
-      if (source === 'ip' || accuracyM > 3500) {
+      if (isCoarseIp) {
+        // City-level network IP is approximate (ISP hub), so keep area editable & ask user to confirm exact sector
+        setDetectedCoords({ lat: snapped.area.lat, lng: snapped.area.lng });
+        setDetectedAddress(undefined);
+        setDropdownOpen(true);
         setGeoStatus({
           type: 'warning',
-          text: `Detected ${displayLabel} — snapped to ${snapped.area.name} (approx. network location). Refine your exact sector below if needed.`,
+          text: `Detected ${fallbackCityLabel || 'Karachi'} via network IP (GPS unavailable). Selected ${snapped.area.name} — choose your exact sector below if needed.`,
         });
       } else {
+        setDetectedCoords({ lat, lng });
+        const displayLabel = revLabel || snapped.area.name;
+        setDetectedAddress(displayLabel);
+        setDropdownOpen(false);
         setGeoStatus({
           type: 'success',
-          text: `Location detected: ${displayLabel} — snapped to ${snapped.area.name}.`,
+          text: `Location detected: ${displayLabel} (${snapped.area.name}).`,
         });
       }
     } else {
-      // Outside Karachi service range: snap delivery coordinates to the nearest valid Karachi service area
-      const outsideLabel = revLabel || fallbackCityLabel || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-      setDetectedCoords({ lat: snapped.area.lat, lng: snapped.area.lng });
+      const outsideLabel = revLabel || fallbackCityLabel || `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+      setDetectedCoords(undefined);
       setDetectedAddress(undefined);
+      setDropdownOpen(true);
       setGeoStatus({
         type: 'warning',
-        text: `Detected "${outsideLabel}" (outside Karachi delivery zone). Snapped to nearest Karachi area: ${snapped.area.name}.`,
+        text: `Network/GPS reported "${outsideLabel}" (outside Karachi delivery zone). Please select your Karachi area below.`,
       });
-      setDropdownOpen(true);
     }
   };
 
@@ -191,26 +248,15 @@ export function LocationModal({
 
     try {
       let permissionDenied = false;
+      let blockedByIframePolicy = false;
 
-      // Optional permission pre-check when Permissions API is supported
-      if (navigator.permissions?.query) {
-        try {
-          const perm = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-          if (perm.state === 'denied') {
-            permissionDenied = true;
-          }
-        } catch {
-          // Ignore Permissions API errors across browsers
-        }
-      }
-
-      if (navigator.geolocation && !permissionDenied) {
+      if (navigator.geolocation) {
         // Attempt 1: High-accuracy GPS
         try {
           const pos = await getBrowserPosition({
             enableHighAccuracy: true,
             timeout: 8000,
-            maximumAge: 0,
+            maximumAge: 15000,
           });
           await snapAndApplyLocation(
             pos.coords.latitude,
@@ -222,13 +268,16 @@ export function LocationModal({
         } catch (err1: any) {
           if (err1?.code === 1) {
             permissionDenied = true;
+            if (/permissions?\s*policy|feature\s*policy/i.test(String(err1?.message || ''))) {
+              blockedByIframePolicy = true;
+            }
           } else {
-            // Attempt 2: Network/Wi-Fi fallback via browser Geolocation API
+            // Attempt 2: Wi-Fi / Network positioning via browser Geolocation API
             try {
               const pos = await getBrowserPosition({
                 enableHighAccuracy: false,
-                timeout: 10000,
-                maximumAge: 60000,
+                timeout: 8000,
+                maximumAge: 180000,
               });
               await snapAndApplyLocation(
                 pos.coords.latitude,
@@ -238,32 +287,32 @@ export function LocationModal({
               );
               return;
             } catch (err2: any) {
-              if (err2?.code === 1) permissionDenied = true;
+              if (err2?.code === 1) {
+                permissionDenied = true;
+                if (/permissions?\s*policy|feature\s*policy/i.test(String(err2?.message || ''))) {
+                  blockedByIframePolicy = true;
+                }
+              }
             }
           }
         }
       }
 
-      // Attempt 3: Server IP geolocation + reverse-geocoding fallback when GPS is blocked or unavailable
-      try {
-        const ipResp = await fetch('/api/ip-location');
-        if (ipResp.ok) {
-          const ipData = await ipResp.json();
-          if (ipData?.ok && typeof ipData.lat === 'number' && typeof ipData.lng === 'number') {
-            const cityLabel = [ipData.city, ipData.region, ipData.country].filter(Boolean).join(', ');
-            await snapAndApplyLocation(ipData.lat, ipData.lng, 5000, 'ip', cityLabel);
-            return;
-          }
-        }
-      } catch {
-        // Continue to manual selection prompt
+      // Attempt 3: Direct client-side IP geolocation fallback (sees user's actual ISP IP)
+      const ipData = await detectClientIpLocation();
+      if (ipData) {
+        const cityLabel = [ipData.city, ipData.region, ipData.country].filter(Boolean).join(', ');
+        await snapAndApplyLocation(ipData.lat, ipData.lng, 5000, 'ip', cityLabel);
+        return;
       }
 
       setGeoStatus({
         type: 'error',
-        text: permissionDenied
-          ? 'Location permission is blocked. Please allow GPS access or select your Karachi area below.'
-          : 'Could not detect your location automatically. Please choose your Karachi area from the list.',
+        text: blockedByIframePolicy
+          ? 'Browser preview blocked GPS access. Please search and select your Karachi area below.'
+          : permissionDenied
+          ? 'Location permission is blocked. Allow location access in your browser site settings or select your Karachi area below.'
+          : 'Could not detect your GPS location automatically. Please choose your Karachi area below.',
       });
       setDropdownOpen(true);
     } finally {
