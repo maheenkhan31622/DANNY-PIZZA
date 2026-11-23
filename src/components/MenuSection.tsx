@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import { Search, Mic, MicOff, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { MENU_CATEGORIES, MENU_ITEMS } from '../data/menuData';
 import type { CartItem, MenuCategory, MenuItem } from '../types';
@@ -196,41 +196,43 @@ export function MenuSection({
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <div
-          ref={categoryRailRef}
-          className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto scroll-smooth py-1 px-0.5"
-        >
-          {MENU_CATEGORIES.map((cat) => {
-            const active = activeCategory === cat;
-            return (
-              <button
-                key={cat}
-                ref={(el) => {
-                  catBtnRefs.current[cat] = el;
-                }}
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  onSelectCategory(cat);
-                }}
-                className={`relative z-10 shrink-0 rounded-xl px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold transition-colors duration-200 whitespace-nowrap cursor-pointer border ${
-                  active
-                    ? 'border-transparent text-white shadow-md shadow-red-900/20'
-                    : 'border-red-900/15 dark:border-red-500/20 bg-white dark:bg-[#19080B] text-[#4E2529] dark:text-red-100/80 hover:border-red-500/60 hover:text-red-700 dark:hover:text-white'
-                }`}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="menu-category-active-bg"
-                    transition={{ type: 'spring', stiffness: 360, damping: 32 }}
-                    className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-[#B91C1C] to-[#DC2626] shadow-md shadow-red-900/25"
-                  />
-                )}
-                {cat}
-              </button>
-            );
-          })}
-        </div>
+        <LayoutGroup id="menu-category-tabs">
+          <div
+            ref={categoryRailRef}
+            className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto scroll-smooth py-1 px-0.5"
+          >
+            {MENU_CATEGORIES.map((cat) => {
+              const active = activeCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  ref={(el) => {
+                    catBtnRefs.current[cat] = el;
+                  }}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    onSelectCategory(cat);
+                  }}
+                  className={`relative z-10 flex flex-1 shrink-0 min-w-max items-center justify-center text-center rounded-xl px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold transition-colors duration-200 whitespace-nowrap cursor-pointer border ${
+                    active
+                      ? 'border-transparent text-white shadow-md shadow-red-900/20'
+                      : 'border-red-900/15 dark:border-red-500/20 bg-white dark:bg-[#19080B] text-[#4E2529] dark:text-red-100/80 hover:border-red-500/60 hover:text-red-700 dark:hover:text-white'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="menu-category-active-bg"
+                      transition={{ type: 'spring', stiffness: 360, damping: 32 }}
+                      className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-[#B91C1C] to-[#DC2626] shadow-md shadow-red-900/25"
+                    />
+                  )}
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        </LayoutGroup>
 
         <button
           type="button"
